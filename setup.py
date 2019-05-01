@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='cuda_gpupick',
-    version='1.0.0',
+    version='1.1.0',
     packages=['cuda_gpupick'],
     install_requires=[
         'numpy',

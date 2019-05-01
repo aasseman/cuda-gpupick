@@ -25,10 +25,13 @@ class bcolors:
 def main(args=None):
     parser = argparse.ArgumentParser()
     parser.add_argument('-n', type=int, default=0, help='Number of requested GPUs (default: %(default)s)')
+    parser.add_argument('-f', action='store_true', default=False, help='Ignore NUMA crossing (default: %(default)s)')
     parser.add_argument('command', nargs=argparse.REMAINDER)
     args = parser.parse_args()
 
     requested_devices_count = args.n
+    force_request = args.f
+    print(force_request)
 
     if requested_devices_count > 0:
         nvmlInit()
@@ -108,7 +111,9 @@ def main(args=None):
                         near_gpus += [nvmlDeviceGetHandleByIndex(d)]
             return near_gpus
 
-        while len(chosen_gpus_indices) < requested_devices_count and level < 40:
+        max_level = NVML_TOPOLOGY_SYSTEM if force_request else NVML_TOPOLOGY_HOSTBRIDGE
+
+        while len(chosen_gpus_indices) < requested_devices_count and level <= max_level:
             for h in NearestGpus(level):
                 i = nvmlDeviceGetIndex(h)
                 if i not in chosen_gpus_indices and not device_available[i] & (1 << 6):
@@ -136,7 +141,7 @@ def main(args=None):
 
         numa_nodes = np.unique(numa_nodes)
 
-        if len(numa_nodes) > 1:
+        if len(numa_nodes) > 1 and not force_request:
             print(bcolors.FAIL + "INTERNAL ERROR: Picked GPUs from more than 1 NUMA node: " + str(numa_nodes) + bcolors.ENDC, file=stderr)
             exit(-1)
 
